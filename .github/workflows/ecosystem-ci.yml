@@ -1,0 +1,44 @@
+name: Ecosystem CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ecosystem-ci-erpnext-shipping-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: XASDSdsa/frappe-ecosystem-cicd/.github/workflows/frappe-ci.yml@47fc59d5f392531fd27bc4220b1ecd524fa5d882
+    with:
+      python-version: "3.14"
+      node-version: "24"
+      test-command: python -m compileall -q .
+
+  notify-central-release:
+    needs: ci
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/version-16' && vars.CENTRAL_RELEASE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch unified release build
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          CENTRAL_RELEASE_TOKEN: ${{ secrets.CENTRAL_RELEASE_TOKEN }}
+        with:
+          github-token: ${{ secrets.CENTRAL_RELEASE_TOKEN }}
+          script: |
+            if (!process.env.CENTRAL_RELEASE_TOKEN) {
+              core.setFailed('CENTRAL_RELEASE_TOKEN is required when CENTRAL_RELEASE_ENABLED=true');
+              return;
+            }
+            await github.rest.repos.createDispatchEvent({
+              owner: 'XASDSdsa',
+              repo: 'frappe-ecosystem-cicd',
+              event_type: 'ecosystem-source-updated',
+              client_payload: { repository: context.repo.owner + '/' + context.repo.repo, ref: context.ref, sha: context.sha },
+            });
