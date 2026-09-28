@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   ci:
-    uses: XASDSdsa/frappe-ecosystem-cicd/.github/workflows/frappe-ci.yml@2547aef205ea6994e0e77fdbf8074e376adbf508
+    uses: XASDSdsa/frappe-ecosystem-cicd/.github/workflows/frappe-ci.yml@e5ee8e84dfde22c7c26470902fb3944709a4a9c7
     with:
       python-version: "3.14"
       node-version: "24"
