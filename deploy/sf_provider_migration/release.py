@@ -72,50 +72,26 @@ def image_id(image):
 
 
 def runnable_image(image):
-    """Resolve a pinned local image digest to a tag accepted by Docker run.
-
-    Docker on the deployment host can inspect the local digest but rejects the
-    same digest when passed directly to ``docker run``. Resolve it through the
-    local image table, then verify the resolved tag still points at that exact
-    image before using it with ``--pull=never``.
-    """
-    if image.startswith("sha256:"):
-        expected = image
-    elif "@sha256:" in image:
-        expected = "sha256:" + image.split("@sha256:", 1)[1]
-    else:
+    """Resolve a pinned local image ID to a tag accepted by ``docker run``."""
+    if not image.startswith("sha256:"):
         return image
-
-    for attempt in range(5):
-        rows = run(
-            [
-                "docker",
-                "image",
-                "ls",
-                "--digests",
-                "--no-trunc",
-                "--format",
-                "{{.Repository}}:{{.Tag}} {{.Digest}} {{.ID}}",
-            ],
-            capture=True,
-        ).splitlines()
-        matches = set()
-        for row in rows:
-            fields = row.split()
-            if len(fields) != 3:
-                continue
-            tag, digest, local_id = fields
-            if tag == "<none>:<none>" or expected not in (digest, local_id):
-                continue
-            if image_id(tag) != expected:
+    rows = run(
+        ["docker", "image", "ls", "--no-trunc", "--format", "{{.Repository}}:{{.Tag}} {{.ID}}"],
+        capture=True,
+    ).splitlines()
+    matches = set()
+    for row in rows:
+        fields = row.split()
+        if len(fields) != 2:
+            continue
+        tag, local_id = fields
+        if tag != "<none>:<none>" and local_id == image:
+            if image_id(tag) != image:
                 raise AssertionError("local_image_id_mismatch:" + tag)
             matches.add(tag)
-        if matches:
-            return sorted(matches)[0]
-        if attempt < 4:
-            print("LOCAL_IMAGE_LOOKUP_RETRY " + str(attempt + 1), flush=True)
-            time.sleep(1)
-    raise AssertionError("local_image_digest_not_found:" + expected)
+    if not matches:
+        raise AssertionError("local_image_id_not_found:" + image)
+    return sorted(matches)[0]
 
 
 def state():
@@ -142,18 +118,6 @@ def source_refs():
         assert run(["git", "ls-remote", remote, "refs/heads/" + branch], capture=True).split()[0] == revision, "remote_head_changed:" + label
         values.append((checkout, app, remote, revision, required(base)))
     return values
-
-
-def fetch_source(repo, baseline, revision):
-    result = run(["git", "-C", repo, "fetch", "--depth=1", "origin", baseline, revision], check=False)
-    if result.returncode == 0:
-        return
-    print("SHALLOW_FETCH_FALLBACK " + revision)
-    run(["git", "-C", repo, "fetch", "--depth=2", "origin", revision])
-    present = run(["git", "-C", repo, "cat-file", "-e", baseline + "^{commit}"], check=False)
-    if present.returncode:
-        run(["git", "-C", repo, "fetch", "--depth=1", "origin", baseline])
-    assert run(["git", "-C", repo, "cat-file", "-e", baseline + "^{commit}"], check=False).returncode == 0, "missing_baseline_commit"
 
 
 def verify(target, manifest, image=False, **options):
@@ -200,7 +164,7 @@ def prepare():
         repo = Path("git-source") / checkout
         run(["git", "init", repo])
         run(["git", "-C", repo, "remote", "add", "origin", remote])
-        fetch_source(repo, baseline, revision)
+        run(["git", "-C", repo, "fetch", "--depth=1", "origin", baseline, revision])
         run(["git", "-C", repo, "checkout", "--detach", revision])
         paths = run(["git", "-C", repo, "diff", "--name-only", baseline, revision], capture=True).splitlines()
         assert not any(Path(path).name in {"pyproject.toml", "package.json", "yarn.lock", "requirements.txt"} for path in paths), "dependency_change_requires_new_build_plan"
