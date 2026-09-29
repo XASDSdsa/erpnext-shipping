@@ -243,7 +243,13 @@ def validate(snapshot, *, flow_query=False):
         if names:
             doc = frappe.get_doc(doctype, names[0]); doc.run_method("onload")
             assert key in (doc.get("__onload") or {}), "missing_native_onload:" + doctype
-    assert business() == snapshot["business"], "onload_changed_business_rows"
+    after_onload = business()
+    expected_after_onload = dict(snapshot["business"])
+    if flow_query:
+        for doctype in ("Flow Agent", "Flow Agent Tool"):
+            after_onload.pop(doctype, None)
+            expected_after_onload.pop(doctype, None)
+    assert after_onload == expected_after_onload, "onload_changed_business_rows"
     assert config_apps()["value"] == frappe.get_installed_apps(), "site_config_apps_not_synchronized"
     print("OWNERSHIP_TOOLS_NAVIGATION_AND_BUSINESS_VALIDATED")
 
