@@ -86,32 +86,36 @@ def runnable_image(image):
     else:
         return image
 
-    rows = run(
-        [
-            "docker",
-            "image",
-            "ls",
-            "--digests",
-            "--no-trunc",
-            "--format",
-            "{{.Repository}}:{{.Tag}} {{.Digest}} {{.ID}}",
-        ],
-        capture=True,
-    ).splitlines()
-    matches = set()
-    for row in rows:
-        fields = row.split()
-        if len(fields) != 3:
-            continue
-        tag, digest, local_id = fields
-        if tag == "<none>:<none>" or expected not in (digest, local_id):
-            continue
-        if image_id(tag) != expected:
-            raise AssertionError("local_image_id_mismatch:" + tag)
-        matches.add(tag)
-    if not matches:
-        raise AssertionError("local_image_digest_not_found:" + expected)
-    return sorted(matches)[0]
+    for attempt in range(5):
+        rows = run(
+            [
+                "docker",
+                "image",
+                "ls",
+                "--digests",
+                "--no-trunc",
+                "--format",
+                "{{.Repository}}:{{.Tag}} {{.Digest}} {{.ID}}",
+            ],
+            capture=True,
+        ).splitlines()
+        matches = set()
+        for row in rows:
+            fields = row.split()
+            if len(fields) != 3:
+                continue
+            tag, digest, local_id = fields
+            if tag == "<none>:<none>" or expected not in (digest, local_id):
+                continue
+            if image_id(tag) != expected:
+                raise AssertionError("local_image_id_mismatch:" + tag)
+            matches.add(tag)
+        if matches:
+            return sorted(matches)[0]
+        if attempt < 4:
+            print("LOCAL_IMAGE_LOOKUP_RETRY " + str(attempt + 1), flush=True)
+            time.sleep(1)
+    raise AssertionError("local_image_digest_not_found:" + expected)
 
 
 def state():
