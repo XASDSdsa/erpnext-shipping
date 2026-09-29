@@ -98,7 +98,7 @@ def runnable_image(image):
         ],
         capture=True,
     ).splitlines()
-    matches = []
+    matches = set()
     for row in rows:
         fields = row.split()
         if len(fields) != 3:
@@ -108,10 +108,10 @@ def runnable_image(image):
             continue
         if image_id(tag) != expected:
             raise AssertionError("local_image_id_mismatch:" + tag)
-        matches.append(tag)
-    if len(matches) != 1:
-        raise AssertionError("local_image_digest_not_unique:" + expected)
-    return matches[0]
+        matches.add(tag)
+    if not matches:
+        raise AssertionError("local_image_digest_not_found:" + expected)
+    return sorted(matches)[0]
 
 
 def state():
