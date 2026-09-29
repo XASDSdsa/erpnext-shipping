@@ -33,6 +33,8 @@ TOOL_NAMES = [
     "cancel_sf_waybill", "dispatch_sf_shipment", "print_sf_label", "book_sf_waybill",
     "query_sf_tracking", "query_sf_freight", "get_sf_shipment_status",
 ]
+FLOW_SALES_ORDER_QUERY_SLUG = "query_sales_order_details"
+FLOW_SALES_ORDER_QUERY_PATH = "flow.integrations.erpnext.sales_order_flow.query_sales_order_details"
 BUSINESS = [
     "Shipment", "Shipment Parcel", "Shipment Delivery Note", "Delivery Note", "Delivery Note Item",
     "Sales Order", "Sales Order Item", "Packed Item", "SF Waybill", "SF International Product",
@@ -84,12 +86,16 @@ def scopes():
     result = [{"doctype": "DocType", "filters": {"name": ["in", DOCTYPES]}}]
     for field in frappe.get_meta("DocType").get_table_fields():
         result.append({"doctype": field.options, "filters": {"parent": ["in", DOCTYPES], "parenttype": "DocType"}})
+    flow_agents = frappe.get_all("Flow Agent", filters={"title": ["in", ["Flow", "销售助理"]]}, pluck="name")
     result.extend([
         {"doctype": "Module Def", "filters": {"name": "SF International"}},
         {"doctype": "Custom Field", "filters": {}},
         {"doctype": "Property Setter", "filters": {}},
         {"doctype": "Custom DocPerm", "filters": {"parent": ["in", DOCTYPES]}},
         {"doctype": "Flow Tool", "filters": {"name": ["in", TOOL_NAMES]}},
+        {"doctype": "Flow Tool", "filters": {"slug": FLOW_SALES_ORDER_QUERY_SLUG}},
+        {"doctype": "Flow Agent", "filters": {"name": ["in", flow_agents]}},
+        {"doctype": "Flow Agent Tool", "filters": {"parent": ["in", flow_agents], "parenttype": "Flow Agent"}},
         {"doctype": "Client Script", "filters": {"name": ["in", OLD_SCRIPTS]}},
         {"doctype": "Workspace Sidebar", "filters": {"name": ["in", ["Shipping", "SF International"]]}},
         {"doctype": "Desktop Icon", "filters": {"name": ["in", ["Shipping", "SF International"]]}},
@@ -168,11 +174,52 @@ def tool_contract(snapshot):
     assert not frappe.get_all("Flow Tool", filters={"import_path": ["like", "sf_international.%"]}, pluck="name"), "legacy_tool_path_remaining"
 
 
-def validate(snapshot):
+def validate_flow_sales_order_query():
+    """Verify the source-controlled Flow query tool after the release migration."""
+    tool = frappe.get_all(
+        "Flow Tool",
+        filters={"slug": FLOW_SALES_ORDER_QUERY_SLUG},
+        fields=["name", "type", "code", "import_path", "enabled", "requires_confirmation"],
+    )
+    assert len(tool) == 1, "sales_order_query_tool_missing"
+    row = tool[0]
+    assert row.type == "Imported", "sales_order_query_tool_not_imported"
+    assert not row.code and row.import_path == FLOW_SALES_ORDER_QUERY_PATH, "sales_order_query_tool_path_invalid"
+    assert int(row.enabled or 0) == 1 and int(row.requires_confirmation or 0) == 0, "sales_order_query_tool_disabled"
+    for title in ("Flow", "销售助理"):
+        name = frappe.db.get_value("Flow Agent", {"title": title}, "name") or (
+            title if frappe.db.exists("Flow Agent", title) else None
+        )
+        assert name, "sales_order_query_agent_missing:" + title
+        agent = frappe.get_doc("Flow Agent", name)
+        assert any(item.tool == row.name for item in agent.get("tools") or []), "sales_order_query_agent_unbound:" + title
+    assert callable(frappe.get_attr(FLOW_SALES_ORDER_QUERY_PATH)), "sales_order_query_tool_unresolved"
+
+
+def sync_flow_sales_order_query():
+    """Run the Flow-owned metadata migration through its explicit public interface."""
+    from flow.integrations.erpnext.sales_order_install import install_sales_order_query_tool
+
+    result = install_sales_order_query_tool(enable=True)
+    assert result.get("installed") and result.get("enabled"), "sales_order_query_tool_install_failed"
+    frappe.db.commit()
+    validate_flow_sales_order_query()
+    return result
+
+
+def validate(snapshot, *, flow_query=False):
     from frappe.model.base_document import get_controller
     from frappe.modules.utils import get_module_app
 
-    assert business() == snapshot["business"], "business_rows_schema_or_credentials_changed"
+    current_business = business()
+    expected_business = dict(snapshot["business"])
+    if flow_query:
+        # The release explicitly adds one Flow tool and its two Agent bindings;
+        # all ERP, stock, accounting and customer rows remain strict.
+        for doctype in ("Flow Agent", "Flow Agent Tool"):
+            current_business.pop(doctype, None)
+            expected_business.pop(doctype, None)
+    assert current_business == expected_business, "business_rows_schema_or_credentials_changed"
     assert "sf_international" not in frappe.get_installed_apps(), "legacy_app_still_installed"
     assert get_module_app("SF International") == "erpnext_shipping", "wrong_sf_module_owner"
     assert frappe.db.get_value("Module Def", "SF International", "app_name") == "erpnext_shipping"
@@ -189,6 +236,8 @@ def validate(snapshot):
     assert frappe.get_meta("Shipment", cached=False).get_field("sf_freight_status").options == freight_options(), "freight_status_options_not_synchronized"
     assert "erpnext_shipping.sf_international.shipping.book_sf_order_after_insert" in frappe.get_hooks("doc_events").get("Shipment", {}).get("after_insert", []), "initial_booking_hook_missing"
     tool_contract(snapshot)
+    if flow_query:
+        validate_flow_sales_order_query()
     for doctype, key in (("Shipment", "shipment_contents"), ("Delivery Note", "shipping_state")):
         names = frappe.get_all(doctype, filters={"docstatus": ["!=", 2]}, pluck="name", limit=1)
         if names:
@@ -207,7 +256,9 @@ def migrate(snapshot, inject_failure=False):
     assert business() == snapshot["business"], "business_changed_before_migration"
     if "sf_international" not in frappe.get_installed_apps():
         validate(snapshot)
-        return {"already_migrated": True}
+        result = sync_flow_sales_order_query()
+        validate(snapshot, flow_query=True)
+        return {"already_migrated": True, "flow_sales_order_query": result}
     assert {"erpnext", "flow", "erpnext_shipping"} <= set(frappe.get_installed_apps()), "target_apps_missing"
     assert frappe.db.get_value("Module Def", "SF International", "app_name") == "sf_international", "unexpected_initial_module_owner"
     field_contracts()
@@ -250,7 +301,9 @@ def migrate(snapshot, inject_failure=False):
     frappe.db.commit()
     clear_runtime_cache()
     validate(snapshot)
-    return {"tools": changed_tools, "module_owner": "erpnext_shipping", "retired_app": "sf_international"}
+    result = sync_flow_sales_order_query()
+    validate(snapshot, flow_query=True)
+    return {"tools": changed_tools, "module_owner": "erpnext_shipping", "retired_app": "sf_international", "flow_sales_order_query": result}
 
 
 def restore(snapshot):
@@ -307,7 +360,7 @@ def main():
         if args.mode == "restore":
             restore(snapshot)
         elif args.mode == "validate":
-            validate(snapshot)
+            validate(snapshot, flow_query=True)
         elif args.mode == "compare":
             assert encoded(capture()) == encoded(snapshot), "snapshot_differs"
             print("SNAPSHOT_EXACT_MATCH")

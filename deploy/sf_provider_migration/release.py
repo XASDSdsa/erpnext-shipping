@@ -260,12 +260,17 @@ def rehearse():
     assert first["after"] == second["after"], "migration_not_idempotent"
     metadata(required("BASE_IMAGE"), "restore", snapshot, net, mounts, db)
     metadata(required("BASE_IMAGE"), "compare", snapshot, net, mounts, db)
-    failed = metadata(required("NEW_IMAGE"), "fail-after-owner", snapshot, net, mounts, db, check=False)
-    assert failed.returncode and b"ISOLATED_INJECTED_FAILURE_AFTER_OWNER" in failed.stdout, "failure_injection_not_reached"
+    if first["actions"].get("already_migrated"):
+        # Flow-only releases have no SF ownership mutation to inject after.
+        # The migration and exact rollback checks above remain mandatory.
+        print("FAILURE_INJECTION_NOT_APPLICABLE_NO_OWNERSHIP_CHANGE")
+    else:
+        failed = metadata(required("NEW_IMAGE"), "fail-after-owner", snapshot, net, mounts, db, check=False)
+        assert failed.returncode and b"ISOLATED_INJECTED_FAILURE_AFTER_OWNER" in failed.stdout, "failure_injection_not_reached"
     metadata(required("BASE_IMAGE"), "restore", snapshot, net, mounts, db)
     metadata(required("NEW_IMAGE"), "migrate", snapshot, net, mounts, db)
     run(["python3", "process_check.py", required("NEW_IMAGE"), site, required("PROJECT"), iso / "resources.json"])
-    save("rehearsal.ok.json", {**saved, "snapshot_sha256": sha(snapshot), "backup_sha256": sha(sql), "db_image": image_id(db_image), "redis_image": image_id(redis_image), "resources": load(iso / "resources.json")})
+    save("rehearsal.ok.json", {**saved, "snapshot_sha256": sha(snapshot), "backup_sha256": sha(sql), "db_image": image_id(db_image), "redis_image": image_id(redis_image), "resources": load(iso / "resources.json"), "migration_actions": first["actions"]})
     run(["docker", "stop", db, redis])
     print("ISOLATED_DATABASE_UPGRADE_IDEMPOTENCY_AND_ROLLBACK_OK; resources retained")
 
