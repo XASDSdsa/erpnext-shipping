@@ -71,6 +71,49 @@ def image_id(image):
     return run(["docker", "image", "inspect", image, "--format", "{{.Id}}"], capture=True)
 
 
+def runnable_image(image):
+    """Resolve a pinned local image digest to a tag accepted by Docker run.
+
+    Docker on the deployment host can inspect the local digest but rejects the
+    same digest when passed directly to ``docker run``. Resolve it through the
+    local image table, then verify the resolved tag still points at that exact
+    image before using it with ``--pull=never``.
+    """
+    if image.startswith("sha256:"):
+        expected = image
+    elif "@sha256:" in image:
+        expected = "sha256:" + image.split("@sha256:", 1)[1]
+    else:
+        return image
+
+    rows = run(
+        [
+            "docker",
+            "image",
+            "ls",
+            "--digests",
+            "--no-trunc",
+            "--format",
+            "{{.Repository}}:{{.Tag}} {{.Digest}} {{.ID}}",
+        ],
+        capture=True,
+    ).splitlines()
+    matches = []
+    for row in rows:
+        fields = row.split()
+        if len(fields) != 3:
+            continue
+        tag, digest, local_id = fields
+        if tag == "<none>:<none>" or expected not in (digest, local_id):
+            continue
+        if image_id(tag) != expected:
+            raise AssertionError("local_image_id_mismatch:" + tag)
+        matches.append(tag)
+    if len(matches) != 1:
+        raise AssertionError("local_image_digest_not_unique:" + expected)
+    return matches[0]
+
+
 def state():
     saved = load("release-state.json")
     assert saved["scripts"] == scripts(), "deployment_scripts_changed"
@@ -224,8 +267,8 @@ def rehearse():
     for volume in (prefix + "-db", prefix + "-sites", prefix + "-logs"):
         run(["docker", "volume", "create", volume])
     save(iso / "resources.json", {"network": net, "db": db, "redis": redis, "volumes": [prefix + suffix for suffix in ("-db", "-sites", "-logs")]})
-    run(["docker", "run", "-d", "--name", db, "--network", net, "--env-file", iso / "db.env", "-v", prefix + "-db:/var/lib/mysql", "--mount", "type=bind,source=" + str(iso / "db.cnf") + ",target=/run/secrets/db.cnf,readonly", db_image])
-    run(["docker", "run", "-d", "--name", redis, "--network", net, redis_image])
+    run(["docker", "run", "--pull=never", "-d", "--name", db, "--network", net, "--env-file", iso / "db.env", "-v", prefix + "-db:/var/lib/mysql", "--mount", "type=bind,source=" + str(iso / "db.cnf") + ",target=/run/secrets/db.cnf,readonly", runnable_image(db_image)])
+    run(["docker", "run", "--pull=never", "-d", "--name", redis, "--network", net, runnable_image(redis_image)])
     # MariaDB's initialization server accepts socket queries but runs with
     # --skip-networking. TCP proves the final server is ready for the import.
     client = ["docker", "exec", "-i", db, "mariadb", "--defaults-extra-file=/run/secrets/db.cnf", "--protocol=TCP", "--host=127.0.0.1"]
