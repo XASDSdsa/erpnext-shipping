@@ -3,8 +3,11 @@
 import json
 
 import frappe
-from erpnext.stock.doctype.shipment.shipment import get_company_contact
+from frappe import _
+
+from erpnext.stock.doctype.shipment.carriers import has_carrier_booking
 from erpnext.stock.doctype.shipment.delivery_note_update import update_delivery_note
+from erpnext.stock.doctype.shipment.shipment import get_company_contact
 
 from erpnext_shipping.erpnext_shipping.doctype.letmeship.letmeship import (
 	LETMESHIP_PROVIDER,
@@ -102,13 +105,14 @@ def create_shipment(
 	delivery_contact_name=None,
 	delivery_notes=None,
 ):
-	if isinstance(delivery_notes, str):
-		delivery_notes = json.loads(delivery_notes)
+	service_info = json.loads(service_data) if isinstance(service_data, str) else service_data
+	shipment_doc = _get_provider_shipment(shipment, service_info.get("service_provider"))
+	if shipment_doc.docstatus != 1:
+		frappe.throw(_("Submit the Shipment before booking a shipping service."))
+	if shipment_doc.get("shipment_id") or shipment_doc.get("awb_number") or has_carrier_booking(shipment_doc):
+		frappe.throw(_("This Shipment already has a waybill or carrier booking history."))
+	delivery_notes = _linked_delivery_notes(shipment_doc)
 
-	if delivery_notes is None:
-		delivery_notes = []
-
-	service_info = json.loads(service_data)
 	shipment_info, pickup_contact, delivery_contact = None, None, None
 	pickup_address = get_address(pickup_address_name)
 	delivery_address = get_address(delivery_address_name)
@@ -151,8 +155,7 @@ def create_shipment(
 		)
 
 	if shipment_info:
-		shipment = frappe.get_doc("Shipment", shipment)
-		shipment.db_set(
+		shipment_doc.db_set(
 			{
 				"service_provider": shipment_info.get("service_provider"),
 				"carrier": shipment_info.get("carrier"),
@@ -168,6 +171,23 @@ def create_shipment(
 			update_delivery_note(delivery_notes=delivery_notes, shipment_info=shipment_info)
 
 	return shipment_info
+
+
+def _get_provider_shipment(shipment, service_provider):
+	"""Bind a carrier operation to its persisted Shipment before any external call."""
+	if service_provider not in (LETMESHIP_PROVIDER, SENDCLOUD_PROVIDER):
+		frappe.throw(_("Select a LetMeShip or SendCloud service for this operation."))
+	shipment_doc = frappe.get_doc("Shipment", shipment, for_update=True)
+	shipment_doc.check_permission("write")
+	provider = shipment_doc.get("service_provider")
+	if provider and provider != service_provider:
+		frappe.throw(_("The requested service provider does not match this Shipment."))
+	return shipment_doc
+
+
+def _linked_delivery_notes(shipment_doc):
+	# Request parameters must not project one Shipment's results onto unrelated DNs.
+	return [row.delivery_note for row in shipment_doc.get("shipment_delivery_note") or [] if row.delivery_note]
 
 
 def get_delivery_company_name(shipment: str) -> str | None:
@@ -221,11 +241,14 @@ def save_label_as_attachment(shipment: str, content: bytes, index: int = None) -
 
 @frappe.whitelist()
 def update_tracking(shipment, service_provider, shipment_id, delivery_notes=None):
-	if isinstance(delivery_notes, str):
-		delivery_notes = json.loads(delivery_notes)
-
-	if delivery_notes is None:
-		delivery_notes = []
+	shipment_doc = _get_provider_shipment(shipment, service_provider)
+	if (
+		shipment_doc.get("service_provider") != service_provider
+		or not shipment_doc.get("shipment_id")
+		or str(shipment_doc.shipment_id) != str(shipment_id)
+	):
+		frappe.throw(_("The requested tracking identity does not match this Shipment."))
+	delivery_notes = _linked_delivery_notes(shipment_doc)
 
 	# Update Tracking info in Shipment
 	tracking_data = None
@@ -239,8 +262,7 @@ def update_tracking(shipment, service_provider, shipment_id, delivery_notes=None
 	if not tracking_data:
 		return
 
-	shipment = frappe.get_doc("Shipment", shipment)
-	shipment.db_set(
+	shipment_doc.db_set(
 		{
 			"awb_number": tracking_data.get("awb_number"),
 			"tracking_status": tracking_data.get("tracking_status"),

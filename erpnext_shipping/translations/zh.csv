@@ -1,0 +1,5 @@
+Submit the Shipment before booking a shipping service.,请先提交运单，再向物流服务商下单。
+This Shipment already has a waybill or carrier booking history.,此运单已有物流单号或物流下单历史，不能重复下单。
+Select a LetMeShip or SendCloud service for this operation.,此操作仅支持 LetMeShip 或 SendCloud 服务。
+The requested service provider does not match this Shipment.,请求的物流服务商与此运单不一致。
+The requested tracking identity does not match this Shipment.,查询的物流服务商或单号与此运单不一致。
