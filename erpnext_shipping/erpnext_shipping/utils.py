@@ -49,6 +49,12 @@ def validate_address(address):
 
 
 def validate_phone(doc, method=None):
+	try:
+		from sf_international.sf_international.shipping import validate_phone as sf_validate_phone
+	except Exception:
+		sf_validate_phone = None
+	if sf_validate_phone:
+		return sf_validate_phone(doc, method)
 	if doc.pickup_from_type == "Company":
 		phone_number = frappe.db.get_value("User", doc.pickup_contact_person, "phone")
 	else:
