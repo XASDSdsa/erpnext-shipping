@@ -4,6 +4,7 @@ import json
 
 import frappe
 from erpnext.stock.doctype.shipment.shipment import get_company_contact
+from erpnext.stock.doctype.shipment.delivery_note_update import update_delivery_note
 
 from erpnext_shipping.erpnext_shipping.doctype.letmeship.letmeship import (
 	LETMESHIP_PROVIDER,
@@ -250,21 +251,3 @@ def update_tracking(shipment, service_provider, shipment_id, delivery_notes=None
 
 	if delivery_notes:
 		update_delivery_note(delivery_notes=delivery_notes, tracking_info=tracking_data)
-
-
-def update_delivery_note(delivery_notes, shipment_info=None, tracking_info=None):
-	# Update Shipment Info in Delivery Note
-	# Using db_set since some services might not exist
-	delivery_notes = list(set(delivery_notes))
-
-	for delivery_note in delivery_notes:
-		dl_doc = frappe.get_doc("Delivery Note", delivery_note)
-		if shipment_info:
-			dl_doc.db_set("delivery_type", "Parcel Service")
-			dl_doc.db_set("parcel_service", shipment_info.get("carrier"))
-			dl_doc.db_set("parcel_service_type", shipment_info.get("carrier_service"))
-		if tracking_info:
-			dl_doc.db_set("tracking_number", tracking_info.get("awb_number"))
-			dl_doc.db_set("tracking_url", tracking_info.get("tracking_url"))
-			dl_doc.db_set("tracking_status", tracking_info.get("tracking_status"))
-			dl_doc.db_set("tracking_status_info", tracking_info.get("tracking_status_info"))

@@ -3,6 +3,8 @@
 
 frappe.ui.form.on("Shipment", {
 	refresh: function (frm) {
+		// Native Shipment selects the carrier UI; do not generate competing controls.
+		if (frm.events.shipping_api_enabled && !frm.events.shipping_api_enabled(frm)) return;
 		if (frm.doc.docstatus === 1 && !frm.doc.shipment_id) {
 			frm.add_custom_button(__("Fetch Shipping Rates"), function () {
 				if (frm.doc.shipment_parcel.length > 1) {
@@ -57,6 +59,8 @@ frappe.ui.form.on("Shipment", {
 	},
 
 	fetch_shipping_rates: function (frm) {
+		// Native Shipment selects the carrier UI; do not generate competing controls.
+		if (frm.events.shipping_api_enabled && !frm.events.shipping_api_enabled(frm)) return;
 		if (!frm.doc.shipment_id) {
 			frappe.call({
 				method: "erpnext_shipping.erpnext_shipping.shipping.fetch_shipping_rates",
@@ -94,6 +98,8 @@ frappe.ui.form.on("Shipment", {
 	},
 
 	print_shipping_label: function (frm) {
+		// Native Shipment selects the carrier UI; do not generate competing controls.
+		if (frm.events.shipping_api_enabled && !frm.events.shipping_api_enabled(frm)) return;
 		frappe.call({
 			method: "erpnext_shipping.erpnext_shipping.shipping.print_shipping_label",
 			freeze: true,
@@ -123,6 +129,8 @@ frappe.ui.form.on("Shipment", {
 	},
 
 	update_tracking: function (frm, service_provider, shipment_id) {
+		// Native Shipment selects the carrier UI; do not generate competing controls.
+		if (frm.events.shipping_api_enabled && !frm.events.shipping_api_enabled(frm)) return;
 		const delivery_notes = frm.doc.shipment_delivery_note.map((d) => d.delivery_note);
 
 		frappe.call({
@@ -190,6 +198,7 @@ function show_service_selector(frm, available_services) {
 	});
 
 	frm.select_row = function (service_data) {
+		if (frm.events.shipping_api_enabled && !frm.events.shipping_api_enabled(frm)) return;
 		frappe.call({
 			method: "erpnext_shipping.erpnext_shipping.shipping.create_shipment",
 			freeze: true,

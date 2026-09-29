@@ -49,6 +49,10 @@ def validate_address(address):
 
 
 def validate_phone(doc, method=None):
+	# This integration validates only its own providers. Other carrier apps own
+	# their contact requirements; an unselected native draft is not a booking.
+	if doc.get("service_provider") not in ("LetMeShip", "SendCloud"):
+		return
 	if doc.pickup_from_type == "Company":
 		phone_number = frappe.db.get_value("User", doc.pickup_contact_person, "phone")
 	else:
@@ -124,6 +128,7 @@ def update_tracking_info_daily():
 		filters={
 			"docstatus": 1,
 			"status": "Booked",
+			"service_provider": ["in", ["LetMeShip", "SendCloud"]],
 			"shipment_id": ["!=", ""],
 			"tracking_status": ["!=", "Delivered"],
 		},
