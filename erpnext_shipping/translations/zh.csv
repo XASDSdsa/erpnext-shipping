@@ -3,3 +3,303 @@ This Shipment already has a waybill or carrier booking history.,此运单已有�
 Select a LetMeShip or SendCloud service for this operation.,此操作仅支持 LetMeShip 或 SendCloud 服务。
 The requested service provider does not match this Shipment.,请求的物流服务商与此运单不一致。
 The requested tracking identity does not match this Shipment.,查询的物流服务商或单号与此运单不一致。
+SF International,顺丰国际
+SF International business error [{0}]: {1},顺丰国际接口错误 [{0}]：{1}
+SF International Settings,顺丰国际设置
+IUOP Merchant Credentials,IUOP 商家凭证
+IUOP Token,IUOP Token
+PMS Token,PMS Token
+Username,用户名
+User ID Mod 10,User ID Mod 10
+Optional. Falls back to IUOP Token when empty.,可选。留空则使用 IUOP Token。
+Optional customercode request header,可选，写入 customercode 请求头
+Optional username request header,可选，写入 username 请求头
+Optional x-iuop-userid-mod-10 request header,可选，写入 x-iuop-userid-mod-10 请求头
+Declaration Defaults,申报默认值
+Open API Credentials,开放平台凭证
+App Key,App Key
+App Secret,App Secret
+Encoding AES Key,Encoding AES Key
+Customer Code,客户编码
+Pay Month Card,月结卡号
+Pay Method,运费付款方式
+Tax Pay Method,税金付款方式
+Pickup Type,寄件方式
+Declared Currency,申报币种
+Label Mode Size,面单尺寸
+Default HS Code,默认海关编码
+International Products,国际产品
+Products,产品
+Product Code,产品编码
+Product Name,产品名称
+Preferred,首选
+Use Test Environment,使用测试环境
+Please fill {0},请填写 {0}
+Please add at least one IUOP product (numeric code such as 10).,请至少添加一个 IUOP 产品（数字码，例如 10）。
+Product {0} uses an Open API INT code. Use IUOP numeric codes such as 10 / 29 / 72.,产品 {0} 仍是开放平台 INT 码。请改用 IUOP 数字码，例如 10 / 29 / 72。
+This product code is from the old Open API. Choose an IUOP product such as 国际小包.,这是旧开放平台产品码。请改选 IUOP 产品，例如国际小包。
+IUOP/IECS numeric product codes. The booking dialog shows names only.,IUOP/IECS 数字产品码。下单弹窗只显示名称。
+"IECS numeric code such as 10, 29, 72. Not INT* Open API codes.",IECS 数字码，例如 10、29、72。不要填开放平台 INT 码。
+Please create and submit a Delivery Note first.,请先创建并提交出货单
+Please submit the Delivery Note first.,请先提交出库单
+Please set a company address on the Delivery Note.,请先在出库单上填写公司地址。
+Please set a shipping address on the Delivery Note.,请先在出库单上填写收货地址。
+Address {0} not found.,未找到地址 {0}。
+Please add a street address in Address {0}.,请在地址 {0} 中填写详细街道地址。
+Please add a city in Address {0}.,请在地址 {0} 中填写城市。
+Contact name is required for SF International.,顺丰国际下单必须填写联系人姓名。
+Contact {0} not found.,未找到联系人 {0}。
+SF International did not return trackingNo.,顺丰国际未返回运单号。
+SF International did not return a print task id.,顺丰国际未返回面单任务号。
+SF International did not return orderId for {0}.,顺丰国际未返回 {0} 的数字 orderId。
+SF International printLabel requires a numeric orderId.,打印面单需要先查到顺丰数字 orderId，不能把运单号或空值传给 printLabel。
+SF International order {0} was not found.,未找到顺丰国际订单 {0}。
+SF Label URL,顺丰面单地址
+SF IUOP Order ID,顺丰 IUOP 订单号
+Freight Settlement,运费结算
+SF International Freight Account,顺丰国际运费科目
+Expense account for SF International freight only. Do not use the generic Freight account.,只记顺丰国际运费，不要用普通「运费」科目。
+SF Freight Payable Account,顺丰国际运费应付科目
+SF Freight Supplier,顺丰国际供应商
+SF Freight Journal,顺丰国际运费凭证
+SF International freight {0} / {1},顺丰国际运费 {0} / {1}
+Please create account {0}.,请先创建科目 {0}。
+Please create supplier {0}.,请先创建供应商 {0}。
+Company is required to book SF freight.,记账顺丰国际运费需要公司。
+Payable account is missing.,缺少应付科目。
+Settled,已结算
+SF Freight Payload,顺丰运费原始报文
+Mobile or landline is required for SF International contact {0}.,顺丰国际联系人 {0} 必须填写手机号或固定电话。
+Please add parcel dimensions and weight before creating an SF International shipment.,请先填写包裹的长宽高和重量，再向顺丰国际下单。
+"Parcel length, width, height and weight must be greater than zero.",包裹长、宽、高、重量必须大于 0。
+Cannot change parcels after the carrier booking exists.,承运商已下单后不能再改包裹参数。
+SF Waybill,顺丰运单号
+Query Tracking,查询物流
+Freight,运费
+Print Shipping Label,打印面单
+Query Freight,查询运费
+Printing SF International label,正在获取顺丰国际面单
+No SF waybill to query.,还没有顺丰运单号，无法查询运费。
+Enabled,已启用
+Product,产品
+Weight (kg),重量 (kg)
+Count,件数
+Sender,寄件人
+Receiver,收件人
+Declaration,申报
+Declared Value,货值
+HS Code,海关编码
+Goods,物料
+Items,物料
+No.,编号
+Delivery Note,出库单
+Item,物料
+Amount,金额
+Warehouse,仓库
+Parcel,包裹
+SF waybill creation is in progress. Refresh this Shipment after the background task finishes.,顺丰面单正在后台创建，任务完成后请刷新此出库单。
+SF waybill creation needs verification. Check the waybill history before retrying.,顺丰面单创建结果需要核实，请先查看面单历史后再重试。
+SF waybill creation failed,顺丰面单创建失败
+Refresh Shipment,刷新出库单
+Existing SF Waybill,已有顺丰运单号
+SF waybill {0} is already on shipment {1}.,顺丰运单号 {0} 已挂在运单 {1} 上。
+Enable SF International in SF International Settings.,请先在顺丰国际设置中启用。
+Customs,海关
+English Name,英文品名
+Chinese Name,中文品名
+Parcel Quantity,件数
+Lookup,邮编反查
+No postcode match.,没有匹配的邮编。
+Receiver Phone,收件电话
+Receiver Country,收件国家
+Receiver Province,收件省州
+Receiver City,收件城市
+Receiver Address,收件地址
+Sender Company,寄件公司
+Sender Defaults,寄件预设
+Sender Email,寄件邮箱
+Preset SF sender company (jCompany) on the shipment form.,预设运单上的顺丰寄件公司。
+Preset SF sender email (jEmail) on the shipment form.,预设运单上的顺丰寄件邮箱。
+Sender Province,寄件省州
+Sender City,寄件城市
+Sender Address,寄件地址
+Sender Phone,寄件电话
+Doorplate,门牌号
+Country,国家
+Province,省州
+City,城市
+County,区县
+Postcode,邮编
+Address,详细地址
+Mobile,手机
+Country and postcode are required.,请填写国家和邮编。
+Looking up postcode,正在反查邮编
+Sender follows the pickup address. Company name uses SF settings.,寄件随提货地址，公司名称用顺丰设置里的寄件公司。
+SF International Receiver,顺丰国际收件
+SF Country,顺丰国家
+SF Province,顺丰省州
+SF City,顺丰城市
+SF County,顺丰区县
+SF Postcode,顺丰邮编
+SF Doorplate,顺丰门牌号
+SF Address,顺丰详细地址
+Cancel SF Waybill,取消顺丰面单
+Cancelling SF waybill,正在取消顺丰面单
+SF label cancelled. The shipment and original waybill are kept.,顺丰已确认取消，原运单号和运单记录已保留。
+Creating SF waybill,正在创建面单
+Cancel the existing SF label first.,请先处理现有顺丰面单；已发货包裹请申请拦截。
+SF International waybill number is required to cancel.,取消运单必须提供顺丰运单号。
+No SF waybill to cancel.,没有可取消的顺丰运单号。
+Not an SF International shipment.,这不是顺丰国际运单。
+Print Label and Ship,打印面单并发货
+Printing label and shipping,正在打印面单并发货
+Open Shipping Label,打开面单
+The label was not generated. Please print again.,面单没有生成，请重新打印。
+The label is saved. Open it from the button below.,面单已保存，请点下面按钮打开。
+Shipped. Waybill {0}. The label is saved. Open it from the button below.,已打单发货。运单号 {0}。面单已保存，请点下面按钮打开。
+Submit the shipment before printing the label and shipping.,请先提交运单，再打印面单并发货。
+No SF waybill to ship.,没有可打印面单并发货的顺丰运单号。
+Cancelled shipments cannot be dispatched.,已取消的运单不能打印面单并发货。
+待打单发货,待打单发货
+已发货,已发货
+已取消发货,已取消发货
+顺丰已确认取消,顺丰已确认取消
+申请拦截,申请拦截
+顺丰客服处理中,顺丰客服处理中
+顺丰客服确认成功待顺丰确认,顺丰客服确认成功待顺丰确认
+顺丰客服反馈失败,顺丰客服反馈失败
+顺丰已取消,顺丰已取消
+拦截状态,拦截状态
+Request Interception,申请拦截
+Record SF Customer Service Feedback,记录顺丰客服反馈
+Verify SF Cancellation,核对顺丰取消状态
+Interception Status,拦截状态
+Interception Reason,拦截原因
+Interception Note,顺丰客服反馈记录
+Please enter the interception reason.,请填写拦截原因。
+Please enter the customer service note.,请填写顺丰客服反馈记录。
+Carrier cancellation confirmed. Cancel the local Shipment first; only then cancel the Delivery Note and Sales Order in order.,顺丰已确认取消，请先取消本地运单；运单取消完成后，再依次取消出库单和销售订单。
+Cancel this unshipped SF waybill? The original waybill and all freight records will be kept.,确认取消这张未发货的顺丰面单？原运单号和全部运费记录将保留。
+Interception reason is required.,请填写拦截原因。
+This shipment already has an active interception request.,这张运单已有正在处理的拦截记录。
+Invalid customer service interception status.,顺丰客服反馈状态无效。
+Customer service note is required.,请填写顺丰客服反馈记录。
+Carrier cancellation is already confirmed; do not overwrite it with a manual result.,顺丰已确认取消，不能再覆盖人工反馈记录。
+Carrier cancellation confirmed. Local cancellation remains a separate action.,顺丰已确认取消，本地单据仍需单独办理取消。
+Carrier has not explicitly confirmed cancellation; local documents remain unchanged.,顺丰尚未明确确认取消，本地单据保持不变。
+顺丰取消待确认,顺丰取消待确认
+顺丰已取消，待取消本地运单,顺丰已取消，待取消本地运单
+Transport Status,运输状态
+Freight bill pending verification,运费账单待核实
+账单已取得,账单已取得
+待核实,待核实
+待记账,待记账
+已记账,已记账
+待复核,待复核
+记账待处理,记账待处理
+无需记账,无需记账
+未查询,未查询
+查询成功,查询成功
+本次未查到账单,本次未查到账单
+查询失败,查询失败
+运费记账,运费记账
+更正运费凭证,更正运费凭证
+恢复运费记账,恢复运费记账
+运费更正原因,运费更正原因
+恢复记账原因,恢复记账原因
+请填写原因。,请填写原因。
+确认取消运单 {0} 的运费凭证 {1}？运费账单和历史金额将保留，自动记账将暂停。,确认取消运单 {0} 的运费凭证 {1}？运费账单和历史金额将保留，自动记账将暂停。
+确认恢复运单 {0} 的运费记账？系统将允许根据有效账单重新记账。,确认恢复运单 {0} 的运费记账？系统将允许根据有效账单重新记账。
+顺丰运费凭证须通过“运费记账”中的“更正运费凭证”处理。,顺丰运费凭证须通过“运费记账”中的“更正运费凭证”处理。
+Waybill Replacement,面单替换
+Current Waybill,当前面单
+Replacement Status,替换状态
+Unshipped: recreate waybill,未发货：重新创建面单
+Create new waybill as replacement,创建新运单代替
+Record SF's actual replacement result for the old and new waybill numbers. An accepted request is still processing.,请填写顺丰对旧单号、新单号的实际替换结果；仅受理申请时应选择“顺丰客服处理中”。
+Record SF customer service feedback,记录顺丰客服反馈
+Activate replacement waybill,启用替换面单
+The old waybill and its freight history are kept.,旧单号及其运费历史会保留。
+The replacement is not a cancellation.,创建替换面单不代表旧面单已取消。
+"Before shipping, first obtain exact SF cancellation confirmation for the old label.",未发货换单前，必须先取得顺丰明确取消旧面单的确认。
+"After shipping, create the new label, contact SF customer service on your external platform, and enable it only after they confirm the replacement.",已发货换单时先创建新面单，再在外部平台联系顺丰客服；只有客服明确确认替换成功后才能启用新单号。
+A replacement waybill is waiting for external SF customer service feedback.,替换面单正在等待外部顺丰客服反馈。
+SF customer service confirmed the replacement. You can enable the new waybill.,顺丰客服已确认替换成功，可以启用新单号。
+Replacement feedback is recorded. It does not cancel the old waybill.,已记录替换反馈；这不会取消旧面单。
+No waybill history is available yet.,暂时没有可显示的面单历史。
+The waybill history could not be loaded. The current waybill remains unchanged.,面单历史暂时无法加载，当前单号保持不变。
+Loading waybill history,正在加载面单历史
+Replacement reason,换单原因
+Feedback status,顺丰客服反馈状态
+Feedback note,顺丰客服反馈记录
+Enable reason,启用原因
+Please enter a specific replacement reason (at least four characters).,请填写具体的换单原因（至少四个字符）。
+Please enter the external SF customer service feedback.,请填写外部顺丰客服反馈。
+Please enter an enable reason (at least four characters).,请填写启用原因（至少四个字符）。
+This creates a new SF label only after the old unshipped label has an exact cancellation confirmation. The old number and freight records remain.,只有在旧的未发货面单已取得顺丰明确取消确认后，系统才会创建新面单；旧单号和运费记录会保留。
+"This creates a new label and does not cancel or switch the old one. Contact SF customer service outside ERP, then record their exact result.",这会创建新面单，不会取消或切换旧面单。请在 ERP 外部联系顺丰客服，再记录明确结果。
+Create replacement waybill,创建替换面单
+Create replacement waybill after SF cancellation,顺丰取消确认后创建替换面单
+Replacement created. Contact SF customer service outside ERP before enabling it.,替换面单已创建，请在 ERP 外部联系顺丰客服确认后再启用。
+Replacement waybill is now active. The old waybill remains in history.,替换面单已启用，旧单号仍保留在历史记录中。
+"Edit the corrected recipient, product, and customs data before creating the replacement label.",创建替换面单前，请修改正确的收件人、产品和申报信息。
+Cancel replacement edit,取消换单编辑
+Query historical waybill tracking,查询该历史面单物流
+Query historical waybill freight,查询该历史面单运费
+Historical waybill freight was saved for finance review.,历史面单运费已保存，等待财务复核记账。
+Replacement request result is unknown. Check SF before retrying.,换单请求结果未知，请先核对顺丰后台，再决定是否重试。
+Replacement waybill creation failed. The failed attempt was kept.,替换面单创建失败，失败记录已保留。
+Replacement waybill creation failed,替换面单创建失败
+The replacement form could not be loaded. Refresh the Shipment and try again.,无法载入换单表单，请刷新运单后重试。
+The replacement form could not be read. Refresh the Shipment and try again.,无法读取换单表单，请刷新运单后重试。
+Replacement creation is being processed. Do not submit another request.,替换面单创建请求正在处理中，请不要重复提交。
+The previous replacement request has an uncertain result. Check SF before retrying.,上一笔替换面单下单结果待核实，请先核对顺丰后台再重试。
+Mark as checked before retry,核实后允许重试
+Error,错误
+Default,默认
+Send,发送
+Cancel,取消
+Submit,提交
+No,否
+records,条记录
+Manage,管理
+Please record that you checked SF and confirmed no order was created.,请记录已核对顺丰后台且确认没有生成订单。
+"Replacement edit is open. Use the replacement button to submit, or cancel the edit.",换单编辑已打开，请使用换单按钮提交，或先取消编辑。
+No replacement waybill was returned.,顺丰未返回替换面单号
+Creation Result Needs Verification,下单结果待核实
+Up,有帮助,Flow Run
+Down,无帮助,Flow Run
+Run,运行记录,Flow Session Attachment
+Detail,详情
+Input,输入
+Mode,模式
+Protected,受保护
+Tool,工具
+When,触发事件
+SF International gateway timed out (HTTP {0}). Please try again later.,顺丰网关超时（HTTP {0}），请稍后重试。
+SF International request failed (HTTP {0}).,顺丰接口请求失败（HTTP {0}）。
+Create new SF label,创建新面单
+Use existing SF waybill,已有顺丰运单号
+"Enter the existing SF International waybill, then Save and Submit. No customs form is needed.",填写已有国际顺丰运单号，然后点保存，再点右上角「提交」。不用填寄件、收件和海关。
+"Fill sender, receiver, product and customs, then Save and Submit to create the SF label.",填写寄件、收件、产品和海关，然后点保存，再点右上角「提交」创建顺丰面单。
+Enter the existing SF waybill first.,请先填写已有顺丰运单号。
+Receiver region reused from a successful shipment to this address.,已带出此收货地址上次成功使用的地区信息，无需重复查询选择；地址变更后请重新核对。
+Freight currency,运费币种
+Transport Details,物流说明
+Historical Transport Status,历史运输状态
+Shipment Status,运单状态
+Querying SF tracking,正在查询顺丰物流，请稍候…
+Querying SF freight,正在查询顺丰运费，请稍候…
+Tracking query result,物流查询结果
+Tracking history ({0}),历史物流轨迹（{0} 条）
+Saved tracking history ({0}),物流历史（{0} 条）
+Last tracking query: {0},最近查询：{0}
+No saved tracking events yet. Use Query Tracking to retrieve them.,暂无已保存的物流轨迹，点击“查询物流”获取。
+Freight query result,运费查询结果
+SF has not returned any tracking events yet.,顺丰暂未返回物流轨迹。
+Tracking query completed.,物流查询已完成。
+The rejected replacement already has an SF order or waybill. Check SF cancellation before retrying; do not create another order.,失败换单已有顺丰订单或运单号，请先核对顺丰取消状态，不能重复下单。
+Verify SF cancellation,核对顺丰取消状态
+SF cancellation was confirmed. You may now retry the replacement if needed.,顺丰已明确确认取消，如仍需换单现在可以重试。
+SF has not explicitly confirmed cancellation. The Shipment remains unchanged.,顺丰尚未明确确认取消，运单及本地单据保持不变。
+Tools,工具

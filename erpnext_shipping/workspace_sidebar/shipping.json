@@ -33,6 +33,17 @@
    "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
+   "label": "SF International Settings",
+   "link_to": "SF International Settings",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
    "label": "SendCloud",
    "link_to": "SendCloud",
    "link_type": "DocType",

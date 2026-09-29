@@ -1,0 +1,306 @@
+{
+ "actions": [],
+ "creation": "2026-09-04 13:20:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "column_break_auth",
+  "section_credentials",
+  "iuop_token",
+  "pms_token",
+  "column_break_account",
+  "customer_code",
+  "username",
+  "userid_mod_10",
+  "section_billing",
+  "declared_currency",
+  "default_ename",
+  "default_declared_value",
+  "column_break_billing",
+  "default_hs_code",
+  "default_cname",
+  "section_freight",
+  "freight_expense_account",
+  "column_break_freight",
+  "freight_payable_account",
+  "freight_supplier",
+  "section_sender",
+  "sender_company",
+  "column_break_sender",
+  "sender_email",
+  "section_products",
+  "products",
+  "section_legacy",
+  "use_test_environment",
+  "app_key",
+  "app_secret",
+  "encoding_aes_key",
+  "column_break_legacy",
+  "pay_month_card",
+  "pay_method",
+  "tax_pay_method",
+  "pickup_type",
+  "label_mode_size"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "column_break_auth",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_credentials",
+   "fieldtype": "Section Break",
+   "label": "IUOP Merchant Credentials"
+  },
+  {
+   "fieldname": "iuop_token",
+   "fieldtype": "Password",
+   "label": "IUOP Token"
+  },
+  {
+   "description": "Optional. Falls back to IUOP Token when empty.",
+   "fieldname": "pms_token",
+   "fieldtype": "Password",
+   "label": "PMS Token"
+  },
+  {
+   "fieldname": "column_break_account",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Optional customercode request header",
+   "fieldname": "customer_code",
+   "fieldtype": "Data",
+   "label": "Customer Code"
+  },
+  {
+   "description": "Optional username request header",
+   "fieldname": "username",
+   "fieldtype": "Data",
+   "label": "Username"
+  },
+  {
+   "description": "Optional x-iuop-userid-mod-10 request header",
+   "fieldname": "userid_mod_10",
+   "fieldtype": "Data",
+   "label": "User ID Mod 10"
+  },
+  {
+   "fieldname": "section_billing",
+   "fieldtype": "Section Break",
+   "label": "Declaration Defaults"
+  },
+  {
+   "default": "CNY",
+   "fieldname": "declared_currency",
+   "fieldtype": "Link",
+   "label": "Declared Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "column_break_billing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "9504200090",
+   "fieldname": "default_hs_code",
+   "fieldtype": "Data",
+   "label": "Default HS Code"
+  },
+  {
+   "default": "Billiard goods",
+   "fieldname": "default_ename",
+   "fieldtype": "Data",
+   "label": "Default English Name"
+  },
+  {
+   "default": "台球体育用品",
+   "fieldname": "default_cname",
+   "fieldtype": "Data",
+   "label": "Default Chinese Name"
+  },
+  {
+   "default": "20",
+   "fieldname": "default_declared_value",
+   "fieldtype": "Float",
+   "label": "Default Declared Value",
+   "precision": "2"
+  },
+  {
+   "fieldname": "section_freight",
+   "fieldtype": "Section Break",
+   "label": "SF International Freight Account"
+  },
+  {
+   "description": "Expense account for SF International freight only. Do not use the generic Freight account.",
+   "fieldname": "freight_expense_account",
+   "fieldtype": "Link",
+   "label": "SF International Freight Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "column_break_freight",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "freight_payable_account",
+   "fieldtype": "Link",
+   "label": "SF Freight Payable Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "freight_supplier",
+   "fieldtype": "Link",
+   "label": "SF Freight Supplier",
+   "options": "Supplier"
+  },
+  {
+   "fieldname": "section_sender",
+   "fieldtype": "Section Break",
+   "label": "Sender Defaults"
+  },
+  {
+   "description": "Preset SF sender company (jCompany) on the shipment form.",
+   "fieldname": "sender_company",
+   "fieldtype": "Data",
+   "label": "Sender Company"
+  },
+  {
+   "fieldname": "column_break_sender",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Preset SF sender email (jEmail) on the shipment form.",
+   "fieldname": "sender_email",
+   "fieldtype": "Data",
+   "label": "Sender Email"
+  },
+  {
+   "description": "IUOP/IECS numeric product codes. The booking dialog shows names only.",
+   "fieldname": "section_products",
+   "fieldtype": "Section Break",
+   "label": "International Products"
+  },
+  {
+   "fieldname": "products",
+   "fieldtype": "Table",
+   "label": "Products",
+   "options": "SF International Product"
+  },
+  {
+   "fieldname": "section_legacy",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Open API Credentials"
+  },
+  {
+   "default": "1",
+   "fieldname": "use_test_environment",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Use Test Environment"
+  },
+  {
+   "fieldname": "app_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "App Key"
+  },
+  {
+   "fieldname": "app_secret",
+   "fieldtype": "Password",
+   "hidden": 1,
+   "label": "App Secret"
+  },
+  {
+   "fieldname": "encoding_aes_key",
+   "fieldtype": "Password",
+   "hidden": 1,
+   "label": "Encoding AES Key"
+  },
+  {
+   "fieldname": "column_break_legacy",
+   "fieldtype": "Column Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "pay_month_card",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Pay Month Card"
+  },
+  {
+   "default": "1",
+   "fieldname": "pay_method",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Pay Method",
+   "options": "1\n2\n3"
+  },
+  {
+   "default": "2",
+   "fieldname": "tax_pay_method",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Tax Pay Method",
+   "options": "1\n2\n3"
+  },
+  {
+   "default": "0",
+   "fieldname": "pickup_type",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Pickup Type",
+   "options": "0\n1"
+  },
+  {
+   "default": "1",
+   "fieldname": "label_mode_size",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Label Mode Size"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-05 13:20:00.000000",
+ "modified_by": "Administrator",
+ "module": "SF International",
+ "name": "SF International Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Stock Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
