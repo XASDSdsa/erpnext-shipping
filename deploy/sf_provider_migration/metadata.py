@@ -207,6 +207,18 @@ def sync_flow_sales_order_query():
     return result
 
 
+def business_before_flow_query(snapshot):
+    """Compare business rows while allowing only an already-installed query binding."""
+    current = business()
+    expected = dict(snapshot["business"])
+    tool = frappe.db.get_value("Flow Tool", {"slug": FLOW_SALES_ORDER_QUERY_SLUG}, ["type", "import_path"], as_dict=True)
+    if tool and tool.type == "Imported" and tool.import_path == FLOW_SALES_ORDER_QUERY_PATH:
+        for doctype in ("Flow Agent", "Flow Agent Tool"):
+            current.pop(doctype, None)
+            expected.pop(doctype, None)
+    assert current == expected, "business_changed_before_migration"
+
+
 def validate(snapshot, *, flow_query=False):
     from frappe.model.base_document import get_controller
     from frappe.modules.utils import get_module_app
@@ -259,7 +271,7 @@ def migrate(snapshot, inject_failure=False):
     from frappe.modules.import_file import import_file_by_path
     from flow.integrations.erpnext.install import LEGACY_TOOL_PATHS, migrate_legacy_tool_paths
 
-    assert business() == snapshot["business"], "business_changed_before_migration"
+    business_before_flow_query(snapshot)
     if "sf_international" not in frappe.get_installed_apps():
         validate(snapshot)
         result = sync_flow_sales_order_query()
