@@ -154,9 +154,14 @@ def tool_contract(snapshot):
 
     original = next(group["rows"] for group in snapshot["metadata"] if group["doctype"] == "Flow Tool")
     assert {row["name"] for row in original} == set(TOOL_NAMES), "unexpected_legacy_tool_inventory"
+    known_paths = set(LEGACY_TOOL_PATHS) | set(LEGACY_TOOL_PATHS.values())
     for row in original:
         expected = dict(row)
-        expected["import_path"] = LEGACY_TOOL_PATHS[row["import_path"]]
+        # A release can be applied to a site that already completed the ownership
+        # migration. Preserve the current Flow path in that case; only rewrite the
+        # retired SF path. Unknown paths still fail closed below.
+        assert row["import_path"] in known_paths, "unknown_flow_tool_path:" + row["name"]
+        expected["import_path"] = LEGACY_TOOL_PATHS.get(row["import_path"], row["import_path"])
         actual = frappe.get_all("Flow Tool", filters={"name": row["name"]}, fields=["*"])
         assert len(actual) == 1 and encoded(actual[0]) == encoded(expected), "tool_settings_changed:" + row["name"]
         assert callable(frappe.get_attr(expected["import_path"])), "unresolved_tool:" + row["name"]
