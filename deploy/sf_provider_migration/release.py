@@ -140,6 +140,18 @@ def source_refs():
     return values
 
 
+def fetch_source(repo, baseline, revision):
+    result = run(["git", "-C", repo, "fetch", "--depth=1", "origin", baseline, revision], check=False)
+    if result.returncode == 0:
+        return
+    print("SHALLOW_FETCH_FALLBACK " + revision)
+    run(["git", "-C", repo, "fetch", "--depth=2", "origin", revision])
+    present = run(["git", "-C", repo, "cat-file", "-e", baseline + "^{commit}"], check=False)
+    if present.returncode:
+        run(["git", "-C", repo, "fetch", "--depth=1", "origin", baseline])
+    assert run(["git", "-C", repo, "cat-file", "-e", baseline + "^{commit}"], check=False).returncode == 0, "missing_baseline_commit"
+
+
 def verify(target, manifest, image=False, **options):
     command = ["python3", "verify_code.py", "image" if image else "container", target, manifest]
     for key, value in options.items():
@@ -184,7 +196,7 @@ def prepare():
         repo = Path("git-source") / checkout
         run(["git", "init", repo])
         run(["git", "-C", repo, "remote", "add", "origin", remote])
-        run(["git", "-C", repo, "fetch", "--depth=1", "origin", baseline, revision])
+        fetch_source(repo, baseline, revision)
         run(["git", "-C", repo, "checkout", "--detach", revision])
         paths = run(["git", "-C", repo, "diff", "--name-only", baseline, revision], capture=True).splitlines()
         assert not any(Path(path).name in {"pyproject.toml", "package.json", "yarn.lock", "requirements.txt"} for path in paths), "dependency_change_requires_new_build_plan"
