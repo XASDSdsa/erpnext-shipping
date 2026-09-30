@@ -26,6 +26,77 @@ os.umask(0o077)
 os.chdir(ROOT)
 
 
+def metadata_script_relative():
+    """Return the optional Flow-owned migration script path.
+
+    The default SF ownership migration remains the source of truth for old
+    images.  A Flow script is accepted only as a relative path below the
+    exact Flow Git archive prepared by this release; arbitrary local paths are
+    rejected before any image or database work starts.
+    """
+    value = os.environ.get("METADATA_SCRIPT_RELATIVE", "").strip()
+    if not value:
+        return None
+    path = Path(value)
+    assert not path.is_absolute() and value == path.as_posix(), "metadata_script_must_be_relative"
+    assert ".." not in path.parts and path.parts, "metadata_script_path_traversal"
+    assert path.parts[:2] == ("app-source", "flow") and len(path.parts) > 2, "metadata_script_must_belong_to_flow_archive"
+    assert path.suffix == ".py", "metadata_script_must_be_python"
+    return path.as_posix()
+
+
+def metadata_script_path(*, verify_flow_archive=False):
+    """Resolve the selected release script and verify its provenance."""
+    relative = metadata_script_relative()
+    if relative is None:
+        path = ROOT / "metadata.py"
+        assert path.is_file(), "default_metadata_script_missing"
+        return path
+    source_relative = Path(*Path(relative).parts[2:])
+    flow_checkout = ROOT / "git-source" / "flow" / source_relative
+    flow_archive = ROOT / relative
+    assert flow_checkout.is_file(), "flow_metadata_script_missing_from_git_tree:" + relative
+    assert flow_archive.is_file(), "flow_metadata_script_missing_from_archive:" + relative
+    assert flow_checkout.read_bytes() == flow_archive.read_bytes(), "flow_metadata_archive_mismatch:" + relative
+    if verify_flow_archive:
+        # Resolve only within the Flow app source directory; no symlink or
+        # alternate checkout may become the runtime script.
+        root = (ROOT / "app-source" / "flow").resolve()
+        resolved = flow_archive.resolve()
+        assert root == resolved or root in resolved.parents, "flow_metadata_script_outside_archive"
+        tree = run(["git", "-C", ROOT / "git-source" / "flow", "ls-tree", required("FLOW_REV"), "--", source_relative.as_posix()], capture=True)
+        entry = tree.split(None, 3)
+        assert len(entry) == 4 and entry[0] in {"100644", "100755"} and entry[1] == "blob" and entry[3] == source_relative.as_posix(), "flow_metadata_script_not_regular_git_file"
+        actual_blob = run(["git", "hash-object", flow_archive], capture=True)
+        assert actual_blob == entry[2], "flow_metadata_script_not_from_target_commit"
+    return flow_archive
+
+
+def metadata_script_descriptor():
+    relative = metadata_script_relative()
+    path = metadata_script_path(verify_flow_archive=relative is not None)
+    return {"relative": relative, "sha256": sha(path)}
+
+
+def metadata_container_path():
+    relative = metadata_script_relative()
+    if relative is None:
+        return "/run/release/metadata.py"
+    return "/run/release/" + relative
+
+
+def prepare_metadata_permissions():
+    """Expose only this Git-pinned source file to the container's app user."""
+    path = metadata_script_path(verify_flow_archive=metadata_script_relative() is not None)
+    path.chmod((path.stat().st_mode & 0o777) | 0o044)
+    directory = path.parent
+    while True:
+        directory.chmod((directory.stat().st_mode & 0o777) | 0o011)
+        if directory == ROOT:
+            break
+        directory = directory.parent
+
+
 def required(key):
     value = os.environ.get(key)
     assert value, "missing_environment:" + key
@@ -60,7 +131,11 @@ def sha(path):
 
 
 def scripts():
-    return {name: sha(ROOT / name) for name in TOOLS}
+    result = {name: sha(ROOT / name) for name in TOOLS}
+    # The selected Flow migration script is part of the immutable release
+    # inputs even though it is not copied into this Shipping repository.
+    result["metadata_script"] = metadata_script_descriptor()
+    return result
 
 
 def inspection(target):
@@ -148,6 +223,7 @@ def running(expected_image, expected_id, services=SERVICES, *, init=None):
 
 def prepare():
     assert not Path("release-state.json").exists() and not Path("git-source").exists(), "use_new_release_directory"
+    metadata_script_relative()
     refs = source_refs()
     base, candidate = required("BASE_IMAGE"), required("NEW_IMAGE")
     assert base != candidate
@@ -184,6 +260,9 @@ def prepare():
     verify(base, "baseline-sources.json", image=True, assets_out="baseline-assets.json")
     for service in ("backend", "frontend"):
         verify(required("PROJECT") + "-" + service + "-1", "baseline-sources.json", assets_match="baseline-assets.json")
+    # Select the application-owned migration only after the running baseline
+    # and its immutable source have passed the normal release checks.
+    prepare_metadata_permissions()
     build = ["docker", "build", "--pull=false", "-t", candidate]
     for name in ("BASE_IMAGE", "ERP_REV", "SF_REV", "SHIPPING_REV", "FLOW_REV", "RELEASE_NAME"):
         build.extend(["--build-arg", name + "=" + required(name)])
@@ -213,7 +292,7 @@ def metadata(image, mode, snapshot, network, mounts, db_host, *, check=True):
     command = ["docker", "run", "--rm", "--network", network, "--user", "frappe", "--workdir", SITES]
     for source, destination in mounts:
         command += ["--mount", "type=" + ("bind" if str(source).startswith("/") else "volume") + ",source=" + str(source) + ",target=" + destination]
-    command += ["--mount", "type=bind,source=" + str(ROOT) + ",target=/run/release,readonly", "--mount", "type=bind,source=" + str(snapshot.parent) + ",target=/capture", "--entrypoint", PYTHON, image, "/run/release/metadata.py", mode, "--site", required("SITE"), "--snapshot", "/capture/" + snapshot.name, "--db-host", db_host]
+    command += ["--mount", "type=bind,source=" + str(ROOT) + ",target=/run/release,readonly", "--mount", "type=bind,source=" + str(snapshot.parent) + ",target=/capture", "--entrypoint", PYTHON, image, metadata_container_path(), mode, "--site", required("SITE"), "--snapshot", "/capture/" + snapshot.name, "--db-host", db_host]
     output = run(command, capture=True, check=check)
     if check:
         print(output)
@@ -229,9 +308,33 @@ def migration_result(output):
     raise AssertionError("missing_migration_result")
 
 
+def metadata_read_preflight():
+    """Prove the real app user can read the pinned script before creating DBs."""
+    path = metadata_script_path(verify_flow_archive=metadata_script_relative() is not None)
+    probe = "import hashlib,pathlib,sys; p=pathlib.Path(sys.argv[1]); assert p.is_file(), 'metadata_script_missing'; print(hashlib.sha256(p.read_bytes()).hexdigest())"
+    for image in (required("BASE_IMAGE"), required("NEW_IMAGE")):
+        actual = run(["docker", "run", "--rm", "--network", "none", "--user", "frappe", "--mount", "type=bind,source=" + str(ROOT) + ",target=/run/release,readonly", "--entrypoint", PYTHON, image, "-c", probe, metadata_container_path()], capture=True)
+        assert actual == sha(path), "metadata_script_unreadable_or_changed:" + image
+    print("METADATA_APP_USER_READ_OK")
+
+
+def failure_injection_required(actions):
+    # An already-transferred SF module says nothing about a Flow metadata
+    # mutation. Application-owned migrations must always rehearse rollback
+    # after their mutation boundary.
+    return metadata_script_relative() is not None or not actions.get("already_migrated")
+
+
+def failure_injection_marker():
+    if metadata_script_relative() is not None:
+        return b"ISOLATED_INJECTED_FAILURE_AFTER_OWNER:FLOW_METADATA"
+    return b"ISOLATED_INJECTED_FAILURE_AFTER_OWNER"
+
+
 def rehearse():
     saved = state()
     assert not Path("rehearsal.ok.json").exists() and not Path("isolation").exists(), "use_new_release_for_rehearsal"
+    metadata_read_preflight()
     backup = Path(required("BACKUP_DIR")).resolve()
     run(["python3", "validate_backup.py", backup])
     db_image, redis_image = required("DB_IMAGE"), required("REDIS_IMAGE")
@@ -283,13 +386,13 @@ def rehearse():
     assert first["after"] == second["after"], "migration_not_idempotent"
     metadata(required("BASE_IMAGE"), "restore", snapshot, net, mounts, db)
     metadata(required("BASE_IMAGE"), "compare", snapshot, net, mounts, db)
-    if first["actions"].get("already_migrated"):
-        # Flow-only releases have no SF ownership mutation to inject after.
-        # The migration and exact rollback checks above remain mandatory.
+    if not failure_injection_required(first["actions"]):
+        # The default SF script has no ownership mutation on an already-
+        # migrated site. Custom application migrations never take this branch.
         print("FAILURE_INJECTION_NOT_APPLICABLE_NO_OWNERSHIP_CHANGE")
     else:
         failed = metadata(required("NEW_IMAGE"), "fail-after-owner", snapshot, net, mounts, db, check=False)
-        assert failed.returncode and b"ISOLATED_INJECTED_FAILURE_AFTER_OWNER" in failed.stdout, "failure_injection_not_reached"
+        assert failed.returncode and failure_injection_marker() in failed.stdout, "failure_injection_not_reached"
     metadata(required("BASE_IMAGE"), "restore", snapshot, net, mounts, db)
     metadata(required("NEW_IMAGE"), "migrate", snapshot, net, mounts, db)
     run(["python3", "process_check.py", required("NEW_IMAGE"), site, required("PROJECT"), iso / "resources.json"])

@@ -20,10 +20,41 @@ uninstall would delete the records which this release transfers to their owners.
 
 ## Controlled release
 
-`release.env` pins the verified r9 baseline and SSH repositories. Export exact
-`ERP_REV`, `SHIPPING_REV`, `FLOW_REV` and `SF_REV` commit hashes, together with a
-new `RELEASE_NAME` and `NEW_IMAGE`. Obtain this directory from the exact pushed
-Shipping commit. Never edit a release directory or application code on the server.
+`release.env` contains historical baseline defaults and SSH repositories.
+Explicitly exported known release variables take precedence over these defaults.
+Before each invocation, export the verified current `BASE_IMAGE` and all four
+`BASE_*_REV` values, exact target `ERP_REV`, `SHIPPING_REV`, `FLOW_REV` and `SF_REV`
+commit hashes, together with a new `RELEASE_NAME` and `NEW_IMAGE`. The same values
+must remain in effect for prepare, rehearsal and deployment. An explicitly empty
+value is preserved and fails the required-value check; it never falls back to an
+older deployment. Do not source `release.env` after exporting overrides.
+
+Obtain this directory from the exact pushed `SHIPPING_REV` commit. The candidate
+Shipping revision includes these release-script changes even if its runtime
+application code is unchanged. `prepare` verifies the target branch head, checks
+out that commit and compares every release tool with its file in that checkout.
+Never edit a release directory or application code on the server.
+
+By default the release runs `metadata.py` for SF ownership migration. For a
+Flow-only workflow release, export
+`METADATA_SCRIPT_RELATIVE=app-source/flow/deploy/customer_service_workflows/metadata.py`.
+The selected script remains owned by the Flow repository. `prepare` accepts only
+a regular Python file from the exact `FLOW_REV` Git tree and its matching source
+archive; absolute paths, other apps, path traversal and substituted source files
+are rejected. The relative path and SHA-256 are fixed in `release-state.json`
+and checked again for rehearsal and deployment. The same script must support the
+baseline image's `snapshot`, `restore` and `compare` commands without requiring
+new Flow application modules, and the candidate's `migrate`, `validate` and
+`fail-after-owner` commands. The injected failure must occur after the Flow
+metadata write and report `ISOLATED_INJECTED_FAILURE_AFTER_OWNER:FLOW_METADATA`.
+
+Only the selected script receives the read permission and its ancestor
+directories receive the traversal permission needed by the container's `frappe`
+user; secret directories and files retain their existing restrictions. Before
+creating the isolated network, volumes or database, `rehearse` reads that script
+as `frappe` in both baseline and candidate images and checks the exact SHA-256.
+Custom Flow migrations always run the injected-failure and exact-rollback checks,
+including when the SF module had already been migrated.
 
 1. `./release.sh prepare`: verify remote branch heads, baseline source and
    resource hashes, construct a candidate from Git archives, build each changed
