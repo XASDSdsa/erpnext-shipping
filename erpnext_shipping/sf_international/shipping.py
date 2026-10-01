@@ -231,19 +231,6 @@ def validate_shipment_delivery_notes(doc):
 	return names
 
 
-def _clear_waybill_fields(doc):
-	doc.shipment_id = ""
-	doc.awb_number = ""
-	if _has_field("Shipment", "sf_iuop_order_id"):
-		doc.sf_iuop_order_id = ""
-	if _has_field("Shipment", "sf_label_url"):
-		doc.sf_label_url = ""
-	if hasattr(doc, "tracking_status"):
-		doc.tracking_status = ""
-	if hasattr(doc, "tracking_url"):
-		doc.tracking_url = ""
-	if hasattr(doc, "tracking_status_info"):
-		doc.tracking_status_info = ""
 
 
 def _require_shipping_mutation(doc):
@@ -1240,17 +1227,6 @@ def lookup_sf_postcode(country_code, post_code):
 	return query_postcode(country_code, post_code)
 
 
-def _delivery_note_weight(dn) -> float:
-	weight = flt(dn.total_net_weight)
-	if weight > 0:
-		return weight
-	total = 0.0
-	for item in dn.get("items") or []:
-		row_weight = flt(item.total_weight)
-		if row_weight <= 0:
-			row_weight = flt(item.weight_per_unit) * flt(item.qty)
-		total += row_weight
-	return total
 
 
 def _parcel_payload(shipment) -> list[dict]:
@@ -1524,44 +1500,8 @@ def _party_payload(address_name, contact=None, company_fallback="", link_contact
 	}
 
 
-def _parties_for_delivery_note(dn, shipment=None):
-	if shipment:
-		from_company = shipment.pickup_from_type == "Company"
-		pickup_address = shipment.pickup_address_name
-		delivery_address = shipment.delivery_address_name
-		pickup_contact = (
-			_user_contact_row(shipment.pickup_contact_person)
-			if from_company
-			else _contact_row(shipment.pickup_contact_name)
-		)
-		delivery_contact = _contact_row(shipment.delivery_contact_name)
-		sender = _party_payload(pickup_address, pickup_contact, dn.company, link_contact=not from_company)
-	else:
-		pickup_address = _dn_value(dn, "company_address", "dispatch_address_name")
-		delivery_address = _dn_value(dn, "shipping_address_name", "customer_address")
-		pickup_contact = _user_contact_row(frappe.session.user)
-		delivery_contact = _contact_row(_dn_value(dn, "shipping_contact", "contact_person"))
-		sender = _party_payload(pickup_address, pickup_contact, dn.company, link_contact=False)
-	return {
-		"sender": sender,
-		"receiver": _party_payload(delivery_address, delivery_contact, dn.customer_name or dn.customer),
-	}
 
 
-def _declaration_state(dn, settings, shipment=None):
-	presets = _customs_presets(settings)
-	if shipment and shipment.shipment_id:
-		form = _parse_form_json(shipment.get("sf_form_json") if _has_field("Shipment", "sf_form_json") else None)
-		return {
-			"declared_value": flt(form.get("declared_value")) or flt(shipment.value_of_goods) or presets["declared_value"],
-			"declared_currency": (form.get("declared_currency") or presets["declared_currency"]),
-			"hs_code": (form.get("hs_code") or presets["hs_code"]),
-		}
-	return {
-		"declared_value": presets["declared_value"],
-		"declared_currency": presets["declared_currency"],
-		"hs_code": presets["hs_code"],
-	}
 
 
 def _content_from_delivery_note(dn) -> str:
@@ -3262,13 +3202,6 @@ def _sf_waybill(doc) -> str:
 	return str(doc.shipment_id or doc.awb_number or "").strip()
 
 
-def _cancel_sf_waybill(doc):
-	if not _is_sf_shipment(doc):
-		return
-	waybill = _sf_waybill(doc)
-	if not waybill:
-		return
-	cancel_order([waybill])
 
 
 def cancel_sf_order_on_cancel(doc, method=None):
