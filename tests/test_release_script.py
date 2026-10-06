@@ -33,6 +33,14 @@ def test_default_metadata_script_remains_shipping_script():
         assert module.metadata_script_path() == ROOT / "deploy/sf_provider_migration/metadata.py"
 
 
+def test_build_base_image_defaults_to_running_base_and_allows_explicit_rebase():
+    module = load_release()
+    with patch.dict(os.environ, {"BASE_IMAGE": "running"}, clear=True):
+        assert module.build_base_image() == "running"
+    with patch.dict(os.environ, {"BASE_IMAGE": "running", "BUILD_BASE_IMAGE": "low-layers"}, clear=True):
+        assert module.build_base_image() == "low-layers"
+
+
 def test_metadata_script_rejects_non_flow_or_traversal_paths():
     module = load_release()
     for value in (

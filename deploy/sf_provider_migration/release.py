@@ -103,6 +103,11 @@ def required(key):
     return value
 
 
+def build_base_image():
+    """Return the immutable image used only for candidate construction."""
+    return os.environ.get("BUILD_BASE_IMAGE") or required("BASE_IMAGE")
+
+
 def run(arguments, *, capture=False, input=None, check=True, timeout=None):
     # Credentials are only passed in protected files, never these arguments.
     print("+ " + shlex.join([str(arg) for arg in arguments]), flush=True)
@@ -173,6 +178,9 @@ def state():
     saved = load("release-state.json")
     assert saved["scripts"] == scripts(), "deployment_scripts_changed"
     assert saved["base_id"] == image_id(required("BASE_IMAGE")), "base_image_changed"
+    build_base = build_base_image()
+    assert saved["build_base_image"] == build_base, "build_base_image_changed"
+    assert saved["build_base_id"] == image_id(build_base), "build_base_id_changed"
     assert saved["candidate_id"] == image_id(required("NEW_IMAGE")), "candidate_image_changed"
     assert saved["revisions"] == {"erpnext": required("ERP_REV"), "sf_international": required("SF_REV"), "erpnext_shipping": required("SHIPPING_REV"), "flow": required("FLOW_REV")}, "requested_revisions_changed"
     return saved
@@ -226,8 +234,11 @@ def prepare():
     metadata_script_relative()
     refs = source_refs()
     base, candidate = required("BASE_IMAGE"), required("NEW_IMAGE")
+    build_base = build_base_image()
     assert base != candidate
+    assert build_base != candidate
     base_id = image_id(base)
+    build_base_id = image_id(build_base)
     running(base, base_id)
     assert run(["docker", "image", "inspect", candidate], capture=True, check=False).returncode != 0, "candidate_tag_already_exists"
     # Resolve substitutions and preserve unrelated override settings before
@@ -265,12 +276,13 @@ def prepare():
     prepare_metadata_permissions()
     build = ["docker", "build", "--pull=false", "-t", candidate]
     for name in ("BASE_IMAGE", "ERP_REV", "SF_REV", "SHIPPING_REV", "FLOW_REV", "RELEASE_NAME"):
-        build.extend(["--build-arg", name + "=" + required(name)])
+        value = build_base if name == "BASE_IMAGE" else required(name)
+        build.extend(["--build-arg", name + "=" + value])
     run(build + ["."])
     verify(candidate, "candidate-sources.json", image=True, baseline_assets="baseline-assets.json", assets_out="candidate-assets.json")
     run(["docker", "run", "--rm", "--network", "none", "--entrypoint", PYTHON, candidate, "-c", "import frappe; frappe.init('', sites_path='/home/frappe/frappe-bench/sites'); from frappe.gettext.translate import get_translations_from_mo; t=get_translations_from_mo('zh','erpnext'); assert t.get('Pickup and Delivery Details'); print('ERPNEXT_GETTEXT_OK')"])
     assert image_id(base) == base_id
-    save("release-state.json", {"scripts": scripts(), "base_id": base_id, "candidate_id": image_id(candidate), "revisions": {app: rev for _, app, _, rev, _ in refs}})
+    save("release-state.json", {"scripts": scripts(), "base_id": base_id, "build_base_image": build_base, "build_base_id": build_base_id, "candidate_id": image_id(candidate), "revisions": {app: rev for _, app, _, rev, _ in refs}})
     print("CANDIDATE_IMAGE_READY; run rehearse before deploy")
 
 

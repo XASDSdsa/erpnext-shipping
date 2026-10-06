@@ -35,6 +35,14 @@ application code is unchanged. `prepare` verifies the target branch head, checks
 out that commit and compares every release tool with its file in that checkout.
 Never edit a release directory or application code on the server.
 
+If the current production image has accumulated too many OverlayFS layers for
+Docker to mount during a new build, export `BUILD_BASE_IMAGE` with a separate,
+immutable Git-built image whose source and Frappe revision have already been
+verified. `BASE_IMAGE` remains the running production image for source checks,
+backup, rollback and the production switch; `BUILD_BASE_IMAGE` is used only by
+the Docker build and is pinned in `release-state.json`. Without this explicit
+override the build uses `BASE_IMAGE` as before.
+
 By default the release runs `metadata.py` for SF ownership migration. For a
 Flow-only workflow release, export
 `METADATA_SCRIPT_RELATIVE=app-source/flow/deploy/customer_service_workflows/metadata.py`.
