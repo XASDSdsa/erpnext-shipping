@@ -1,6 +1,0 @@
-*
-!Dockerfile
-!assets-entrypoint.sh
-!candidate-sources.json
-!app-source/
-!app-source/**
