@@ -65,7 +65,7 @@ def main():
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="mode", required=True)
     manifest = sub.add_parser("manifests")
-    for option in ("erpnext", "sf", "shipping", "base-erpnext", "base-sf", "base-shipping", "flow", "base-flow"):
+    for option in ("erpnext", "shipping", "base-erpnext", "base-shipping", "flow", "base-flow"):
         manifest.add_argument("--" + option, required=True)
     for mode in ("image", "container"):
         check = sub.add_parser(mode)
@@ -79,7 +79,6 @@ def main():
         baseline, candidate = {}, {}
         for app, checkout, target, base in (
             ("erpnext", "erpnext", args.erpnext, args.base_erpnext),
-            ("sf_international", "sf", args.sf, args.base_sf),
             ("erpnext_shipping", "shipping", args.shipping, args.base_shipping),
             ("flow", "flow", args.flow, args.base_flow),
         ):
@@ -94,8 +93,13 @@ def main():
     sources = json.loads(args.manifest.read_text())
     inspection = json.loads(run(["docker", "inspect", args.target]))[0]
     labels = inspection["Config"].get("Labels") or {}
-    for app, label in (("erpnext", "org.leya.erpnext-revision"), ("sf_international", "org.leya.sf-revision"), ("erpnext_shipping", "org.leya.shipping-revision"), ("flow", "org.leya.flow-revision")):
-        assert labels.get(label) == sources[app]["sha"], ("revision_label_mismatch", app)
+    if args.manifest.name == "candidate-sources.json":
+        root = Path("/home/frappe/frappe-bench")
+        for relative in ("apps/sf_international", "assets/sf_international", "sites/assets/sf_international"):
+            assert not (root / relative).exists() and not (root / relative).is_symlink(), ("retired_sf_path_present", relative)
+    for app, data in sources.items():
+        label = "org.erpnext." + {"erpnext": "erpnext", "erpnext_shipping": "shipping", "flow": "flow"}.get(app, app) + "-revision"
+        assert labels.get(label) == data["sha"], ("revision_label_mismatch", app)
     command = (
         ["docker", "run", "--rm", "-i", "--network", "none", "--entrypoint", BENCH_PYTHON, args.target]
         if args.mode == "image"

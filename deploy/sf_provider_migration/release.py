@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Four-repository carrier migration candidate, isolated DB rehearsal and controlled app switch."""
+"""Clean Git candidate image build; database migration is intentionally disabled."""
 import gzip
 import fcntl
 import hashlib
@@ -21,7 +21,7 @@ SITES = BENCH + "/sites"
 PYTHON = BENCH + "/env/bin/python"
 SERVICES = ["backend", "websocket", "frontend", "queue-long", "queue-short", "scheduler"]
 BACKGROUND = ["scheduler", "queue-long", "queue-short"]
-TOOLS = ["release.py", "release.sh", "release.env", "metadata.py", "queue_check.py", "process_check.py", "verify_code.py", "check_health.py", "validate_backup.py", "Dockerfile", ".dockerignore", "assets-entrypoint.sh"]
+TOOLS = ["release.py", "release.sh", "release.env", "queue_check.py", "process_check.py", "verify_code.py", "check_health.py", "validate_backup.py", "Dockerfile", ".dockerignore", "assets-entrypoint.sh"]
 os.umask(0o077)
 os.chdir(ROOT)
 
@@ -137,9 +137,6 @@ def sha(path):
 
 def scripts():
     result = {name: sha(ROOT / name) for name in TOOLS}
-    # The selected Flow migration script is part of the immutable release
-    # inputs even though it is not copied into this Shipping repository.
-    result["metadata_script"] = metadata_script_descriptor()
     return result
 
 
@@ -182,7 +179,7 @@ def state():
     assert saved["build_base_image"] == build_base, "build_base_image_changed"
     assert saved["build_base_id"] == image_id(build_base), "build_base_id_changed"
     assert saved["candidate_id"] == image_id(required("NEW_IMAGE")), "candidate_image_changed"
-    assert saved["revisions"] == {"erpnext": required("ERP_REV"), "sf_international": required("SF_REV"), "erpnext_shipping": required("SHIPPING_REV"), "flow": required("FLOW_REV")}, "requested_revisions_changed"
+    assert saved["revisions"] == {"erpnext": required("ERP_REV"), "erpnext_shipping": required("SHIPPING_REV"), "flow": required("FLOW_REV")}, "requested_revisions_changed"
     return saved
 
 
@@ -190,7 +187,6 @@ def source_refs():
     values = []
     for label, checkout, app, base in (
         ("ERP", "erpnext", "erpnext", "BASE_ERPNEXT_REV"),
-        ("SF", "sf", "sf_international", "BASE_SF_REV"),
         ("SHIPPING", "shipping", "erpnext_shipping", "BASE_SHIPPING_REV"),
         ("FLOW", "flow", "flow", "BASE_FLOW_REV"),
     ):
@@ -230,8 +226,9 @@ def running(expected_image, expected_id, services=SERVICES, *, init=None):
 
 
 def prepare():
+    raise SystemExit("legacy_runner_disabled_use_erp_next_deploy_clean_git_release")
+
     assert not Path("release-state.json").exists() and not Path("git-source").exists(), "use_new_release_directory"
-    metadata_script_relative()
     refs = source_refs()
     base, candidate = required("BASE_IMAGE"), required("NEW_IMAGE")
     build_base = build_base_image()
@@ -267,15 +264,12 @@ def prepare():
     for name in TOOLS:
         assert (Path("git-source/shipping/deploy/sf_provider_migration") / name).read_bytes() == (ROOT / name).read_bytes(), "script_not_from_target_commit:" + name
     save("changed-paths.json", changed)
-    run(["python3", "verify_code.py", "manifests", "--erpnext", required("ERP_REV"), "--sf", required("SF_REV"), "--shipping", required("SHIPPING_REV"), "--base-erpnext", required("BASE_ERPNEXT_REV"), "--base-sf", required("BASE_SF_REV"), "--base-shipping", required("BASE_SHIPPING_REV"), "--flow", required("FLOW_REV"), "--base-flow", required("BASE_FLOW_REV")])
+    run(["python3", "verify_code.py", "manifests", "--erpnext", required("ERP_REV"), "--shipping", required("SHIPPING_REV"), "--base-erpnext", required("BASE_ERPNEXT_REV"), "--base-shipping", required("BASE_SHIPPING_REV"), "--flow", required("FLOW_REV"), "--base-flow", required("BASE_FLOW_REV")])
     verify(base, "baseline-sources.json", image=True, assets_out="baseline-assets.json")
     for service in ("backend", "frontend"):
         verify(required("PROJECT") + "-" + service + "-1", "baseline-sources.json", assets_match="baseline-assets.json")
-    # Select the application-owned migration only after the running baseline
-    # and its immutable source have passed the normal release checks.
-    prepare_metadata_permissions()
     build = ["docker", "build", "--pull=false", "-t", candidate]
-    for name in ("BASE_IMAGE", "ERP_REV", "SF_REV", "SHIPPING_REV", "FLOW_REV", "RELEASE_NAME"):
+    for name in ("BASE_IMAGE", "ERP_REV", "SHIPPING_REV", "FLOW_REV", "RELEASE_NAME"):
         value = build_base if name == "BASE_IMAGE" else required(name)
         build.extend(["--build-arg", name + "=" + value])
     run(build + ["."])
@@ -283,7 +277,7 @@ def prepare():
     run(["docker", "run", "--rm", "--network", "none", "--entrypoint", PYTHON, candidate, "-c", "import frappe; frappe.init('', sites_path='/home/frappe/frappe-bench/sites'); from frappe.gettext.translate import get_translations_from_mo; t=get_translations_from_mo('zh','erpnext'); assert t.get('Pickup and Delivery Details'); print('ERPNEXT_GETTEXT_OK')"])
     assert image_id(base) == base_id
     save("release-state.json", {"scripts": scripts(), "base_id": base_id, "build_base_image": build_base, "build_base_id": build_base_id, "candidate_id": image_id(candidate), "revisions": {app: rev for _, app, _, rev, _ in refs}})
-    print("CANDIDATE_IMAGE_READY; run rehearse before deploy")
+    print("CANDIDATE_IMAGE_READY; build-only release; no migration or deployment was run")
 
 
 def capture_directory(path):
@@ -296,6 +290,8 @@ def capture_directory(path):
 
 
 def metadata(image, mode, snapshot, network, mounts, db_host, *, check=True):
+    raise SystemExit("database_migration_disabled_clean_build_only")
+
     if mode == "fail-after-owner":
         assert db_host.startswith("shipment-check-") and network.startswith("shipment-check-"), "failure_injection_requires_isolation"
         assert inspection(network)["Internal"], "failure_injection_requires_internal_network"
@@ -344,6 +340,8 @@ def failure_injection_marker():
 
 
 def rehearse():
+    raise SystemExit("legacy_rehearsal_disabled_use_clean_git_build")
+
     saved = state()
     assert not Path("rehearsal.ok.json").exists() and not Path("isolation").exists(), "use_new_release_for_rehearsal"
     metadata_read_preflight()
@@ -582,6 +580,8 @@ def prepare_override(path, old, new, configuration):
 
 
 def deploy():
+    raise SystemExit("production_deployment_disabled_use_approved_deployment_procedure")
+
     saved = state()
     rehearsal = load("rehearsal.ok.json")
     assert all(rehearsal[key] == saved[key] for key in saved), "rehearsal_not_current_candidate"
@@ -732,5 +732,5 @@ def deploy():
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) == 2 and sys.argv[1] in {"prepare", "rehearse", "deploy"}, "usage: release.sh prepare|rehearse|deploy"
-    {"prepare": prepare, "rehearse": rehearse, "deploy": deploy}[sys.argv[1]]()
+    assert len(sys.argv) == 2 and sys.argv[1] == "prepare", "usage: release.sh prepare"
+    prepare()

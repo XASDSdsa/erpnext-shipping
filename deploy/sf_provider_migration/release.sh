@@ -8,7 +8,6 @@ release_config_keys=(
   PROJECT_PATH PROJECT SITE BASE_IMAGE NEW_IMAGE RELEASE_NAME
   BUILD_BASE_IMAGE
   ERP_REMOTE ERP_BRANCH ERP_REV BASE_ERPNEXT_REV
-  SF_REMOTE SF_BRANCH SF_REV BASE_SF_REV
   SHIPPING_REMOTE SHIPPING_BRANCH SHIPPING_REV BASE_SHIPPING_REV
   FLOW_REMOTE FLOW_BRANCH FLOW_REV BASE_FLOW_REV
   DB_IMAGE REDIS_IMAGE BACKUP_DIR PRODUCTION_NETWORK METADATA_SCRIPT_RELATIVE
@@ -27,7 +26,7 @@ for release_index in "${!release_override_names[@]}"; do
   printf -v "${release_override_names[$release_index]}" '%s' "${release_override_values[$release_index]}"
 done
 set +a
-case "${1:-}" in prepare|rehearse|deploy) ;; *) echo "usage: release.sh prepare|rehearse|deploy" >&2; exit 2 ;; esac
+case "${1:-}" in prepare) ;; *) echo "usage: release.sh prepare" >&2; exit 2 ;; esac
 if [[ ${RELEASE_NO_TEE:-0} == 1 ]]; then
   # Restricted CI shells may not provide /dev/fd for process substitution.
   # Production keeps the tee path so progress remains visible and persisted.
